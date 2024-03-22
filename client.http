@@ -2,6 +2,11 @@ POST http://localhost:3333/url
 Content-Type: application/json
 
 {
-  "code": "teste",
+  "code": "testse",
   "url": "https://google.com.br"
 }
+
+
+###
+
+GET http://localhost:3333/url

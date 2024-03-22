@@ -1,8 +1,27 @@
 import fastify from "fastify";
 import { z } from "zod";
 import { sql } from "./lib/postgres";
+import postgres from "postgres";
 
 const app = fastify();
+
+app.get('/', async () => {
+
+})
+
+app.get("/url", async () => {
+
+  try {
+    const result = await sql`
+      SELECT * FROM short_url
+      ORDER BY created_at DESC
+    `;
+
+    return result;
+  } catch (error) {
+    console.error(error)
+  }
+});
 
 app.post("/url", async (request, reply) => {
   const { code, url } = z
@@ -12,17 +31,29 @@ app.post("/url", async (request, reply) => {
     })
     .parse(request.body);
 
-  const result = await sql`
-    INSERT INTO short_url (code, original_url)
-    VALUES (${code}, ${url})
-    RETURNING id
+  try {
+    const result = await sql`
+      INSERT INTO short_url (code, original_url)
+      VALUES (${code}, ${url})
+      RETURNING id
     `;
 
-  const link = result[0];
+    const link = result[0];
 
-  return reply.status(201).send({
-    shortLinkId: link.id,
-  });
+    return reply.status(201).send({
+      shortLinkId: link.id,
+    });
+  } catch (err) {
+    if (err instanceof postgres.PostgresError) {
+      if (err.code == "23505") {
+        return reply.status(400).send({ message: "Código duplicado!" });
+      }
+    }
+
+    console.error(err);
+
+    return reply.status(500).send({ message: "Internal server error" });
+  }
 });
 
 app
